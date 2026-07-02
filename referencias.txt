@@ -1,0 +1,9 @@
+Quadros Disponiveis;3
+Tempo Clock;10
+0;R
+1;R
+2;R
+3;R
+0;R
+1;R
+4;R
