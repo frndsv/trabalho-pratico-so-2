@@ -1,19 +1,12 @@
-import java.nio.charset.Charset;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Queue;
-import java.util.Scanner;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.Scanner;
 
 
 public class App {
@@ -165,18 +158,122 @@ public class App {
      */
     private static void algoritmoSegundaChance() {
 
+        //lista que representa a memoria principal
+        List<Pagina> memoria = new ArrayList<>();
+        //fila que representa a ordem das paginas, porem as paginas podem receber 2 chance
+        Queue<Pagina> fila = new LinkedList<>();
+        //numero que representa os page faults
+        int pageFaults = 0;
 
-        //imprimirMetricas(pageFaults, "SEGUNDA CHANCE");
+        for (String referencia : referencias) {
+            // Divide a linha no formato: ID;TipoAcesso
+            String[] dados = referencia.split(";");
+            //representa o id da pagina atual
+            int idPagina = Integer.parseInt(dados[0]);
+            //representa o tipo de acesso Read ou Write
+            char acesso = dados[1].charAt(0);
+            //verifica se a pagina ja esta na memoria
+            Pagina pagina = buscarPagina(memoria, idPagina);
+            // Caso a página já esteja na memória, ocorre um HIT
+            if (pagina != null) {
+                //marca que a página foi referenciada recentemente.
+                pagina.R = true;
+                //se o acesso for de escrita marca como recentemente modificada
+                if (acesso == 'W') {
+                    pagina.M = true;
+                }
+            } else {
+                //pagina nao esta na memoria = pagefault
+                pageFaults++;
+                //se a memoria estiver cheia, remove uma pagina
+                if (memoria.size() >= quadrosDisponiveis) {
+
+                    while (true) {
+                        //pega a pagina mais antiga da fila
+                        Pagina candidata = fila.poll();
+                        //se o bit R for true da uma segunda chance inserindo a pagina na fila novamente com o bit R zerado
+                        if (candidata.R) {
+                            candidata.R = false;
+                            fila.add(candidata);
+                        } else {
+                            //se nao foi recentemente referenciada remove direto
+                            memoria.remove(candidata);
+                            break;
+                        }
+                    }
+                }
+                //cria uma nova pagina
+                Pagina nova = new Pagina(idPagina);
+                //toda a pagina recem criada foi recem referenciada
+                nova.R = true;
+                //se o acesso for de escrita marca como recem modificada
+                if (acesso == 'W') {
+                    nova.M = true;
+                }
+                //adiciona a pagina a memoria
+                memoria.add(nova);
+                //adiciona a pagina a fila
+                fila.add(nova);
+            }
+        }
+
+        imprimirMetricas(pageFaults, "SEGUNDA CHANCE");
     }
     
 
     /**  Variante preemptiva do SJF. O escalonador sempre escolhe o processo que possui o menor tempo de execução restante
      * @return Métricas de Tempo de Espera Médio, Tempo de Retorno (Turnaround ) Médio e Vazão (Throughput) .
      */
-    private static void algoritmoEscolhido() {
+    private static void algoritmoEscolhido() { //FIFO
 
-        //imprimirMetricas(pageFaults, "ESCOLHIDO");
+        //lista que representa a memoria principal
+        List<Pagina> memoria = new ArrayList<>();
+        //fila que representa a ordem das paginas
+        Queue<Pagina> fila = new LinkedList<>();
+        //numero de page faults
+        int pageFaults = 0;
+        //para cada referencia de pagina no arquivo
+        for (String referencia : referencias) {
+            //divide os dados 
+            String[] dados = referencia.split(";");
+            //id da pagina atual
+            int idPagina = Integer.parseInt(dados[0]);
+            //tipo de acesso
+            char acesso = dados[1].charAt(0);
+            //busca a pagina na memoria
+            Pagina pagina = buscarPagina(memoria, idPagina);
+            //se a pagina for encontrada da HIT
+            if (pagina != null) {
+                //altera o bit R de recentemente referenciada
+                pagina.R = true;
+                //se o acesso for de escrita altera o bit de recentemente modificada
+                if (acesso == 'W') {
+                    pagina.M = true;
+                }
+            } else {
+                // se a pagina nao foi encontrada da page fault
+                pageFaults++;
+                //se nao tiver espaço na memoria remove a pagina mais antiga
+                if (memoria.size() >= quadrosDisponiveis) {
+                    Pagina removida = fila.poll();
+                    memoria.remove(removida);
+                }
+                //cria nova pagina
+                Pagina nova = new Pagina(idPagina);
+                //coloca o bit de recentemente referenciada como true
+                nova.R = true;
+                //se o acesso for de escrita altera o bit de recentemente modificada tambem
+                if (acesso == 'W') {
+                    nova.M = true;
+                }
+                //adiciona a nova pagina na memoria
+                memoria.add(nova);
+                //adiciona a nova pagina na fila de paginas
+                fila.add(nova);
+            }
+        }
 
+        imprimirMetricas(pageFaults, "FIFO");
     }
 
     /** Algoritmo MY - Semáforo.
