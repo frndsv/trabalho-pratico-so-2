@@ -173,3 +173,40 @@ No pior caso, a escolha da vítima pode percorrer a memória até três vezes:
 Embora o algoritmo possa realizar mais de uma passagem sobre a lista, o número máximo de percursos é constante (até três).
 
 A escolha da vítima possui complexidade linear **O(n)**. No pior caso, quando todas as páginas estão inicialmente no estado Verde, o algoritmo realiza duas passagens completas pela memória (***Verde*** -> ***Amarela*** e ***Amarela*** -> ***Vermelha***) e uma terceira passagem parcial, encerrada assim que encontra a primeira página Vermelha. Dessa forma, o custo máximo é de aproximadamente **2n + 1** operações, mantendo complexidade **O(n)**.
+
+# Relatório de Simulação:
+
+## 1. Cenário de Teste e Metodologia
+
+Para a avaliação final dos algoritmos de substituição de páginas, o simulador processou uma cadeia estruturada de **30 referências à memória**. 
+
+Este cenário de teste foi desenhado com um alto grau de **localidade de referência**, onde um pequeno conjunto de páginas (neste caso, as páginas `1` e `2`) é acessado de forma contínua e intercalada com páginas aleatórias, simulando o comportamento real do núcleo de execução de um processo. 
+
+* **Configuração do ambiente:** 4 quadros de memória disponíveis.
+
+---
+
+## 2. Resultados Obtidos
+
+| Posição | Algoritmo | Total de Referências | Page Faults | Taxa de Faltas |
+| :---: | :--- | :---: | :---: | :---: |
+| **1º** | Segunda Chance | 30 | 14 | 46,67% |
+| **2º** | Algoritmo MY | 30 | 16 | 53,33% |
+| **3º** | FIFO | 30 | 18 | 60,00% |
+
+---
+
+## 3. Análise Técnica e Justificativa
+
+Os resultados comprovam a diferença de eficiência entre abordagens baseadas no tempo de carregamento e abordagens baseadas no histórico de uso das páginas:
+
+### 📉 Baixo desempenho do FIFO (60,00%)
+O algoritmo obteve a pior taxa de acertos porque adota uma política de substituição estritamente temporal ("cega" ao uso). Ao encher a memória, o FIFO removeu as páginas mais antigas (as de número `1` e `2`). Como essas páginas formavam o núcleo estrutural da carga de trabalho e continuavam sendo requisitadas logo em seguida, o sistema foi forçado a buscá-las no disco repetidas vezes, gerando um alto índice de *Page Faults* desnecessários.
+
+### 🔄 Desempenho intermediário do Algoritmo MY (53,33%)
+A solução própria do grupo demonstrou uma melhoria clara em relação ao FIFO. O mecanismo de rebaixamento gradual de prioridade (**Verde** $\rightarrow$ **Amarelo** $\rightarrow$ **Vermelho**) conseguiu proteger as páginas mais acessadas da remoção imediata. Isso garantiu que as páginas vitais sobrevivessem por mais ciclos na memória RAM, reduzindo a taxa de erro.
+
+### 🏆 Superioridade do Segunda Chance (46,67%)
+Este algoritmo apresentou o melhor desempenho para a carga de trabalho. A verificação do bit de referência ($R=1$) funcionou como um escudo perfeito para o padrão de localidade de referência do teste. As páginas `1` e `2`, por serem muito lidas/escritas, mantinham seus bits ativos. 
+
+Quando a memória enchia e elas eram avaliadas para remoção, o sistema imediatamente as "perdoava" (zerando o bit) e as enviava para o final da fila. Isso expulsou de forma muito eficiente apenas as páginas "ruídos" (`3`, `4`, `5`, etc.), cravando a menor taxa de faltas da simulação.
